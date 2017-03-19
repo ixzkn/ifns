@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="ifns-client" Language="1033" Version="1.0.0.0" Manufacturer="ixzkn" UpgradeCode="02c24225-d75d-46b5-9522-688456e9a086">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of ifns-client is already installed." />
+		<MediaTemplate />
+
+		<Feature Id="ProductFeature" Title="ifns-client" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+			<ComponentRef Id="ApplicationShortcut"/>
+		</Feature>
+
+		<UI>
+			<UIRef Id="WixUI_Minimal" />
+			<Publish Dialog="ExitDialog"
+				Control="Finish"
+				Event="DoAction"
+				Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+		</UI>
+		<WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+		
+		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch ifns-client" />
+
+		<!-- Step 3: Include the custom action -->
+		<Property Id="WixShellExecTarget" Value="[#ifns_client_client]" />
+		<CustomAction Id="LaunchApplication"
+			BinaryKey="WixCA"
+			DllEntry="WixShellExec"
+			Impersonate="yes" />
+
+		
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="ifns-client" />
+			</Directory>
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="IFNS Client"/>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR"/>
+		<PropertyRef Id="NETFRAMEWORK40FULLINSTALLROOTDIR64"/>
+		<PropertyRef Id="NETFRAMEWORK40CLIENTINSTALLROOTDIR"/>
+		<PropertyRef Id="NETFRAMEWORK40CLIENTINSTALLROOTDIR64"/>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<Component Id="ifns_client_service_interface">
+				<File Id="ifns_client_service_interface" Source="$(var.service-interface.TargetPath)" KeyPath="yes" Checksum="yes"/>
+			</Component>
+			<Component Id="newtonsoft_json">
+				<File Id="netwonsoft_json" Source="$(var.service-interface.TargetDir)\Newtonsoft.Json.dll" KeyPath="yes" Checksum="yes"/>
+			</Component>
+			<!-- Event Source creation for 32bit OS with .NET 4 Full-->
+			<Component Id="CreateEventSource32BitFullNet4" Guid="5abc7f7a-1653-4364-a662-684863fb016e">
+				<Condition><![CDATA[NETFRAMEWORK40FULLINSTALLROOTDIR AND NOT VersionNT64]]></Condition> 
+				<CreateFolder/>
+				<!-- Create an Event Source -->
+				<Util:EventSource
+					  xmlns:Util="http://schemas.microsoft.com/wix/UtilExtension"
+					  Name="IFDNSServiceHost"
+					  Log="Application"
+					  EventMessageFile="[NETFRAMEWORK40FULLINSTALLROOTDIR]EventLogMessages.dll"/>
+			</Component>
+
+			<!-- Event Source creation for 32bit OS with .NET 4 Client Profile-->
+			<Component Id="CreateEventSource32BitClientNet4" Guid="c62a39ac-1eb3-492f-86f6-f3e1fffdb371">
+				<Condition><![CDATA[NETFRAMEWORK40CLIENTINSTALLROOTDIR AND NOT VersionNT64]]></Condition>
+				<CreateFolder/>
+				<!-- Create an Event Source -->
+				<Util:EventSource
+				  xmlns:Util="http://schemas.microsoft.com/wix/UtilExtension"
+				  Name="IFDNSServiceHost"
+				  Log="Application"
+				  EventMessageFile="[NETFRAMEWORK40CLIENTINSTALLROOTDIR]EventLogMessages.dll"/>
+			</Component>
+
+			<!-- Event Source creation for 64bit OS with .NET 4 Full -->
+			<Component Id="CreateEventSource64BitFullNet4" Guid="7bf51cef-0abf-43bc-ad66-c86fbdacd5d1">
+				<Condition><![CDATA[NETFRAMEWORK40FULLINSTALLROOTDIR64 AND VersionNT64]]></Condition>
+				<CreateFolder/>
+				<!-- Create an Event Source -->
+				<Util:EventSource
+					  xmlns:Util="http://schemas.microsoft.com/wix/UtilExtension"
+					  Name="IFDNSServiceHost"
+					  Log="Application"
+					  EventMessageFile="[NETFRAMEWORK40FULLINSTALLROOTDIR64]EventLogMessages.dll"/>
+			</Component>
+
+			<!-- Event Source creation for 64bit OS with .NET 4 Client Profile -->
+			<Component Id="CreateEventSource64BitClientNet4" Guid="3c836192-98d8-4e27-b2dd-df3279d92093">
+				<Condition><![CDATA[NETFRAMEWORK40CLIENTINSTALLROOTDIR64 AND VersionNT64]]></Condition>
+				<CreateFolder/>
+				<!-- Create an Event Source -->
+				<Util:EventSource
+					  xmlns:Util="http://schemas.microsoft.com/wix/UtilExtension"
+					  Name="IFDNSServiceHost"
+					  Log="Application"
+					  EventMessageFile="[NETFRAMEWORK40CLIENTINSTALLROOTDIR64]EventLogMessages.dll"/>
+			</Component>
+			<Component Id="ifns_client_client">
+				<File Id="ifns_client_client" Source="$(var.desktop.TargetPath)" KeyPath="yes" Checksum="yes"/>
+			</Component>
+			<Component Id="ifns_client_service">
+				<File Id="ifns_client_service" Source="$(var.service.TargetPath)" KeyPath="yes" Checksum="yes"/>
+				<ServiceInstall Id="WinServiceInstall" Name="ifns-service" DisplayName="ifns-service" Type="ownProcess" Start="auto" ErrorControl="critical" Vital="yes" Description="IFNS service" Account="LocalSystem">
+					<ServiceConfig DelayedAutoStart="yes" OnInstall="yes" OnReinstall ="yes" />
+				</ServiceInstall>
+				<ServiceControl Id="StartService" Name="ifns-service" Start="install"  Stop="both" Remove="both" Wait="no" />
+			</Component>
+		</ComponentGroup>
+  
+		<DirectoryRef Id="ApplicationProgramsFolder">
+			<Component Id="ApplicationShortcut" Guid="fa2de484-dca6-4c17-a51e-3e5c00be4fee">
+				<Shortcut Id="ApplicationStartMenuShortcut"
+						  Name="IFNS Client"
+						  Description="IFNS Client"
+						  Target="[#ifns_client_client]"
+						  WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
+				<RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+				<RegistryValue Root="HKCU" Key="Software\Microsoft\ifns-client" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+	</Fragment>
+</Wix>

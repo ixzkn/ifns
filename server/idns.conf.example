@@ -1,0 +1,22 @@
+[database]
+# host to connect to
+host = localhost
+# database name
+name = idns
+# username
+user = idnsuser
+# password
+password = idnspassword
+
+[limits]
+size_limit = 500
+count_limit = 100
+request_limit = 100
+
+[server]
+new_user_key = newuserkey
+
+[client]
+server = "https://serverurl.example.com/index.wsgi"
+apikey = "APIKEY"
+
